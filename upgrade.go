@@ -99,9 +99,9 @@ func (u *upgrader) Upgrade(ctx context.Context, currentVersion string) error {
 		return err
 	}
 
-	downloadedExecutableName := filepath.Base(downloadInfo.DownloadedBinaryFilePath)
+	executableName := filepath.Base(u.executablePath)
 	// verify the checksum
-	if !u.checksumValidator.IsCheckSumValid(ctx, downloadedExecutableName, checksumInfo, downloadInfo.Checksum) {
+	if !u.checksumValidator.IsCheckSumValid(ctx, executableName, checksumInfo, downloadInfo.Checksum) {
 		return ErrInvalidCheckSum
 	}
 
