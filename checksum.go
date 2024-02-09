@@ -67,7 +67,8 @@ func downloadCheckSum(ctx context.Context, url string) (*CheckSumInfo, error) {
 		line := scanner.Text()
 		// parse the line and extract the checksum
 		line = strings.TrimSpace(line)
-		parts := strings.Split(line, " ")
+		// there maybe one or more blank spaces between the checksum and the file name
+		parts := strings.Fields(line)
 		// parts[0] is the checksum, parts[1] is the file name
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("%w: checksum file is malformed", ErrInvalidChecksumFile)
