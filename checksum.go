@@ -23,10 +23,22 @@ type checksumDownloader struct {
 	assetSuffix string
 }
 
-func NewCheckSumDownloader() CheckSumDownloader {
-	return &checksumDownloader{
+type DownloadOpt func(*checksumDownloader)
+
+func WithAssetSuffix(suffix string) DownloadOpt {
+	return func(c *checksumDownloader) {
+		c.assetSuffix = suffix
+	}
+}
+
+func NewCheckSumDownloader(opts ...DownloadOpt) CheckSumDownloader {
+	d := &checksumDownloader{
 		assetSuffix: "checksums.txt",
 	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 var ErrNoCheckSumAsset = errors.New("no checksum asset found")
@@ -61,6 +73,7 @@ func downloadCheckSum(ctx context.Context, url string) (*CheckSumInfo, error) {
 	defer resp.Body.Close()
 
 	checksums := make(map[string]string)
+
 	scanner := bufio.NewScanner(resp.Body)
 	// parse the file and return the checksums
 	for scanner.Scan() {
@@ -87,11 +100,29 @@ type validator struct {
 	arch string
 }
 
-func NewCheckSumValidator() CheckSumValidator {
-	return &validator{
+type ValidatorOption func(*validator)
+
+func WithOS(os string) ValidatorOption {
+	return func(v *validator) {
+		v.os = os
+	}
+}
+
+func WithArch(arch string) ValidatorOption {
+	return func(v *validator) {
+		v.arch = arch
+	}
+}
+
+func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
+	v := &validator{
 		os:   runtime.GOOS,
 		arch: runtime.GOARCH,
 	}
+	for _, opt := range opts {
+		opt(v)
+	}
+	return v
 }
 
 func (v *validator) IsCheckSumValid(ctx context.Context, binary string, checksums *CheckSumInfo, downloadedChecksum string) bool {
