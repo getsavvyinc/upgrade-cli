@@ -1,4 +1,4 @@
-package upgrade
+package checksum
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/getsavvyinc/upgrade-cli/release"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,14 +59,14 @@ func TestDownloadCheckSum(t *testing.T) {
 	t.Run("ValidCheckSumFile", func(t *testing.T) {
 		checksumURL := srv.URL + "/checksums.txt"
 		downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
-		checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
+		checksums, err := downloader.Download(ctx, []release.Asset{
 			{BrowserDownloadURL: checksumURL},
 			{BrowserDownloadURL: srv.URL + "/malformed_path.txt"},
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, checksums)
-		assert.NotEmpty(t, checksums.checksums)
-		for k, v := range checksums.checksums {
+		assert.NotEmpty(t, checksums.Checksums)
+		for k, v := range checksums.Checksums {
 			assert.NotEmpty(t, k)
 			assert.NotEmpty(t, v)
 			assert.Equal(t, strings.Join([]string{"checksum", k}, "_"), v)
@@ -88,7 +89,7 @@ func TestDownloadCheckSum(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
-				checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
+				checksums, err := downloader.Download(ctx, []release.Asset{
 					{BrowserDownloadURL: tc.url},
 				})
 				assert.Error(t, err)
@@ -99,7 +100,7 @@ func TestDownloadCheckSum(t *testing.T) {
 	})
 	t.Run("NoCheckSumAsset", func(t *testing.T) {
 		downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
-		checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
+		checksums, err := downloader.Download(ctx, []release.Asset{
 			{BrowserDownloadURL: srv.URL + "/savvy_darwin_arm64"},
 		})
 		assert.Error(t, err)
@@ -111,8 +112,8 @@ func TestDownloadCheckSum(t *testing.T) {
 func TestCheckSumValidator(t *testing.T) {
 	binary := "savvy"
 	const checksum = "checksum"
-	checksumInfo := &CheckSumInfo{
-		checksums: map[string]string{
+	checksumInfo := &Info{
+		Checksums: map[string]string{
 			binary + "_darwin_x86_64": checksum,
 			binary + "_linux_x86_64":  checksum,
 		},
