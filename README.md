@@ -2,7 +2,9 @@
 
 Upgrade-CLI makes it easy to add an `upgrade` command to your cli.
 
-Upgrade-CLI was built to implement the `upgrade` command for [Savvy's](https://getsavvy.so) OSS [CLI](https://github.com/getsavvyinc/savvy-cli). Savvy's CLI helps developers create and share high quality runbooks right from the terminal.
+Upgrade-CLI was built to implement the `upgrade` command for [Savvy's](https://getsavvy.so) OSS [CLI](https://github.com/getsavvyinc/savvy-cli).
+
+> Savvy's CLI helps developers create and share high quality runbooks right from the terminal.
 
 ## Install
 
@@ -12,8 +14,6 @@ go get github.com/getsavvyinc/upgrade-cli
 ```
 
 ## Usage
-
-[Savvy](https://github.com/getsavvyinc/savvy-cli) uses `upgrade-cli` to implement the [upgrade command](https://github.com/getsavvyinc/savvy-cli/blob/main/cmd/upgrade.go) in less than 10 lines of non boiler plate code
 
 ```go
 package cmd
