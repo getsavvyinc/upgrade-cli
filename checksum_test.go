@@ -103,3 +103,72 @@ func TestDownloadCheckSum(t *testing.T) {
 		assert.ErrorIs(t, err, ErrNoCheckSumAsset)
 	})
 }
+
+func TestCheckSumValidator(t *testing.T) {
+	binary := "savvy"
+	const checksum = "checksum"
+	checksumInfo := &CheckSumInfo{
+		checksums: map[string]string{
+			binary + "_darwin_x86_64": checksum,
+			binary + "_linux_x86_64":  checksum,
+		},
+	}
+
+	testCases := []struct {
+		name               string
+		downloadedChecksum string
+		isValid            bool
+		os                 string
+		arch               string
+		binary             string
+	}{
+		{
+			name:               "ValidChecksums",
+			downloadedChecksum: checksum,
+			os:                 "linux",
+			arch:               "x86_64",
+			isValid:            true,
+			binary:             binary,
+		},
+		{
+			name:               "InvalidChecksums",
+			downloadedChecksum: "invalid_checksum",
+			os:                 "darwin",
+			arch:               "x86_64",
+			isValid:            false,
+			binary:             binary,
+		},
+		{
+			name:               "InvalidOS",
+			downloadedChecksum: checksum,
+			os:                 "windows",
+			arch:               "x86_64",
+			isValid:            false,
+			binary:             binary,
+		},
+		{
+			name:               "InvalidArch",
+			downloadedChecksum: checksum,
+			os:                 "linux",
+			arch:               "not_suppported",
+			isValid:            false,
+			binary:             binary,
+		},
+		{
+			name:               "InvalidBinary",
+			downloadedChecksum: checksum,
+			os:                 "linux",
+			arch:               "x86_64",
+			isValid:            false,
+			binary:             "invalid_binary",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			csv := NewCheckSumValidator(WithArch(tc.arch), WithOS(tc.os))
+			isValid := csv.IsCheckSumValid(context.Background(), tc.binary, checksumInfo, tc.downloadedChecksum)
+			assert.Equal(t, tc.isValid, isValid)
+		})
+	}
+}
