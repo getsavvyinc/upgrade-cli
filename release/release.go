@@ -36,7 +36,7 @@ func NewReleaseGetter(repo, owner string) *githubReleaseGetter {
 }
 
 func (g *githubReleaseGetter) GetLatestRelease(ctx context.Context) (*Info, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", g.repo, g.owner)
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", g.owner, g.repo)
 	return getLatestRelease(ctx, url)
 }
 

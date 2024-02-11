@@ -72,7 +72,7 @@ var ErrInvalidCheckSum = errors.New("invalid checksum")
 func (u *upgrader) IsNewVersionAvailable(ctx context.Context, currentVersion string) (bool, error) {
 	curr, err := version.NewVersion(currentVersion)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse current version: %s with err %w", currentVersion, err)
 	}
 
 	releaseInfo, err := u.releaseGetter.GetLatestRelease(ctx)
@@ -82,7 +82,7 @@ func (u *upgrader) IsNewVersionAvailable(ctx context.Context, currentVersion str
 
 	latest, err := version.NewVersion(releaseInfo.TagName)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse latest version: %s with err %w", releaseInfo.TagName, err)
 	}
 
 	return latest.GreaterThan(curr), nil
