@@ -14,6 +14,8 @@ import (
 )
 
 type Upgrader interface {
+	IsNewVersionAvailable(ctx context.Context, currentVersion string) (bool, error)
+	// Upgrade upgrades the current binary to the latest version.
 	Upgrade(ctx context.Context, currentVersion string) error
 }
 
@@ -66,6 +68,25 @@ func NewUpgrader(owner string, repo string, executablePath string, opts ...Opt) 
 }
 
 var ErrInvalidCheckSum = errors.New("invalid checksum")
+
+func (u *upgrader) IsNewVersionAvailable(ctx context.Context, currentVersion string) (bool, error) {
+	curr, err := version.NewVersion(currentVersion)
+	if err != nil {
+		return false, err
+	}
+
+	releaseInfo, err := u.releaseGetter.GetLatestRelease(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	latest, err := version.NewVersion(releaseInfo.TagName)
+	if err != nil {
+		return false, err
+	}
+
+	return latest.GreaterThan(curr), nil
+}
 
 func (u *upgrader) Upgrade(ctx context.Context, currentVersion string) error {
 	curr, err := version.NewVersion(currentVersion)
