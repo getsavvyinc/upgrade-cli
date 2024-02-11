@@ -7,26 +7,26 @@ import (
 	"net/http"
 )
 
-type ReleaseAsset struct {
+type Asset struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-// ReleaseInfo holds information about a release.
-type ReleaseInfo struct {
-	TagName string         `json:"tag_name"`
-	Assets  []ReleaseAsset `json:"assets"`
+// Info holds information about a release.
+type Info struct {
+	TagName string  `json:"tag_name"`
+	Assets  []Asset `json:"assets"`
 }
 
-type ReleaseGetter interface {
-	GetLatestRelease(ctx context.Context) (*ReleaseInfo, error)
+type Getter interface {
+	GetLatestRelease(ctx context.Context) (*Info, error)
 }
 
 type githubReleaseGetter struct {
 	repo, owner string
 }
 
-var _ ReleaseGetter = (*githubReleaseGetter)(nil)
+var _ Getter = (*githubReleaseGetter)(nil)
 
 func NewReleaseGetter(repo, owner string) *githubReleaseGetter {
 	return &githubReleaseGetter{
@@ -35,13 +35,13 @@ func NewReleaseGetter(repo, owner string) *githubReleaseGetter {
 	}
 }
 
-func (g *githubReleaseGetter) GetLatestRelease(ctx context.Context) (*ReleaseInfo, error) {
+func (g *githubReleaseGetter) GetLatestRelease(ctx context.Context) (*Info, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", g.repo, g.owner)
 	return getLatestRelease(ctx, url)
 }
 
 // getLatestRelease fetches the latest release from GitHub.
-func getLatestRelease(ctx context.Context, url string) (*ReleaseInfo, error) {
+func getLatestRelease(ctx context.Context, url string) (*Info, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func getLatestRelease(ctx context.Context, url string) (*ReleaseInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	var release ReleaseInfo
+	var release Info
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
 	}

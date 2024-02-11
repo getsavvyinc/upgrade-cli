@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/getsavvyinc/upgrade-cli/checksum"
+	"github.com/getsavvyinc/upgrade-cli/release"
 	"github.com/hashicorp/go-version"
 )
 
@@ -18,9 +20,10 @@ type upgrader struct {
 	executablePath     string
 	repo               string
 	owner              string
+	releaseGetter      release.Getter
 	downloader         AssetDownloader
-	checksumDownloader CheckSumDownloader
-	checksumValidator  CheckSumValidator
+	checksumDownloader checksum.Downloader
+	checksumValidator  checksum.CheckSumValidator
 }
 
 var _ Upgrader = (*upgrader)(nil)
@@ -33,13 +36,13 @@ func WithAssetDownloader(d AssetDownloader) Opt {
 	}
 }
 
-func WithCheckSumDownloader(c CheckSumDownloader) Opt {
+func WithCheckSumDownloader(c checksum.Downloader) Opt {
 	return func(u *upgrader) {
 		u.checksumDownloader = c
 	}
 }
 
-func WithCheckSumValidator(c CheckSumValidator) Opt {
+func WithCheckSumValidator(c checksum.CheckSumValidator) Opt {
 	return func(u *upgrader) {
 		u.checksumValidator = c
 	}
@@ -50,9 +53,10 @@ func NewUpgrader(owner string, repo string, executablePath string, opts ...Opt) 
 		repo:               repo,
 		owner:              owner,
 		executablePath:     executablePath,
+		releaseGetter:      release.NewReleaseGetter(repo, owner),
 		downloader:         NewAssetDownloader(executablePath),
-		checksumDownloader: NewCheckSumDownloader(),
-		checksumValidator:  NewCheckSumValidator(),
+		checksumDownloader: checksum.NewCheckSumDownloader(),
+		checksumValidator:  checksum.NewCheckSumValidator(),
 	}
 	for _, opt := range opts {
 		opt(u)
@@ -68,7 +72,7 @@ func (u *upgrader) Upgrade(ctx context.Context, currentVersion string) error {
 		return err
 	}
 
-	releaseInfo, err := getLatestRelease(ctx, u.owner, u.repo)
+	releaseInfo, err := u.releaseGetter.GetLatestRelease(ctx)
 	if err != nil {
 		return err
 	}
@@ -94,7 +98,7 @@ func (u *upgrader) Upgrade(ctx context.Context, currentVersion string) error {
 	}
 
 	// download the checksum file
-	checksumInfo, err := u.checksumDownloader.DownloadCheckSum(ctx, releaseInfo.Assets)
+	checksumInfo, err := u.checksumDownloader.Download(ctx, releaseInfo.Assets)
 	if err != nil {
 		return err
 	}

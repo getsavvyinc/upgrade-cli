@@ -8,19 +8,17 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+
+	"github.com/getsavvyinc/upgrade-cli/release"
 )
 
-type CheckSumDownloader interface {
-	DownloadCheckSum(ctx context.Context, assets []ReleaseAsset) (*CheckSumInfo, error)
+type Downloader interface {
+	Download(ctx context.Context, assets []release.Asset) (*Info, error)
 }
 
-type CheckSumInfo struct {
+type Info struct {
 	// keyed on $binary_os_$arch
-	checksums map[string]string
-}
-
-type CheckSumGetter interface {
-	Get(key string) (string, bool)
+	Checksums map[string]string
 }
 
 type checksumDownloader struct {
@@ -35,7 +33,7 @@ func WithAssetSuffix(suffix string) DownloadOpt {
 	}
 }
 
-func NewCheckSumDownloader(opts ...DownloadOpt) CheckSumDownloader {
+func NewCheckSumDownloader(opts ...DownloadOpt) Downloader {
 	d := &checksumDownloader{
 		assetSuffix: "checksums.txt",
 	}
@@ -47,7 +45,7 @@ func NewCheckSumDownloader(opts ...DownloadOpt) CheckSumDownloader {
 
 var ErrNoCheckSumAsset = errors.New("no checksum asset found")
 
-func (c *checksumDownloader) DownloadCheckSum(ctx context.Context, assets []ReleaseAsset) (*CheckSumInfo, error) {
+func (c *checksumDownloader) Download(ctx context.Context, assets []release.Asset) (*Info, error) {
 	// iterate through the assets and find the one that matches the os and arch
 	for _, asset := range assets {
 		if strings.HasSuffix(asset.BrowserDownloadURL, c.assetSuffix) {
@@ -63,7 +61,7 @@ func (c *checksumDownloader) DownloadCheckSum(ctx context.Context, assets []Rele
 
 var ErrInvalidChecksumFile = errors.New("invalid checksum file")
 
-func downloadCheckSum(ctx context.Context, url string) (*CheckSumInfo, error) {
+func downloadCheckSum(ctx context.Context, url string) (*Info, error) {
 	// download the checksum file
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -96,11 +94,11 @@ func downloadCheckSum(ctx context.Context, url string) (*CheckSumInfo, error) {
 	if len(checksums) == 0 {
 		return nil, fmt.Errorf("%w: checksum file is empty", ErrInvalidChecksumFile)
 	}
-	return &CheckSumInfo{checksums: checksums}, nil
+	return &Info{Checksums: checksums}, nil
 }
 
 type CheckSumValidator interface {
-	IsCheckSumValid(ctx context.Context, binary string, checksums *CheckSumInfo, downloadedChecksum string) bool
+	IsCheckSumValid(ctx context.Context, binary string, checksums *Info, downloadedChecksum string) bool
 }
 
 type validator struct {
@@ -133,10 +131,10 @@ func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
 	return v
 }
 
-func (v *validator) IsCheckSumValid(ctx context.Context, binary string, checksums CheckSumGetter, downloadedChecksum string) bool {
+func (v *validator) IsCheckSumValid(ctx context.Context, binary string, info *Info, downloadedChecksum string) bool {
 
 	key := fmt.Sprintf("%s_%s_%s", binary, v.os, v.arch)
-	expectedChecksum, ok := checksums.Get(key)
+	expectedChecksum, ok := info.Checksums[key]
 	if !ok {
 		return false
 	}
