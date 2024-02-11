@@ -2,6 +2,8 @@
 
 Upgrade-CLI makes it easy to add an `upgrade` command to your cli.
 
+Upgrade-CLI was built to implement the `upgrade` command for [Savvy's](https://getsavvy.so) OSS [CLI](https://github.com/getsavvyinc/savvy-cli). Savvy's CLI helps developers create and share high quality runbooks right from the terminal.
+
 ## Install
 
 ```sh
