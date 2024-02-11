@@ -12,12 +12,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/getsavvyinc/upgrade-cli/release"
 )
 
 type cleanupFn func() error
 
 type AssetDownloader interface {
-	DownloadAsset(ctx context.Context, ReleaseAssets []ReleaseAsset) (*DownloadInfo, cleanupFn, error)
+	DownloadAsset(ctx context.Context, ReleaseAssets []release.Asset) (*DownloadInfo, cleanupFn, error)
 }
 
 type DownloadInfo struct {
@@ -33,19 +35,35 @@ type downloader struct {
 
 var _ AssetDownloader = (*downloader)(nil)
 
-func NewAssetDownloader(executablePath string) AssetDownloader {
-	os := runtime.GOOS
-	arch := runtime.GOARCH
-	return &downloader{
-		os:             os,
-		arch:           arch,
+type AssetDownloadOpt func(*downloader)
+
+func WithOS(os string) AssetDownloadOpt {
+	return func(d *downloader) {
+		d.os = os
+	}
+}
+
+func WithArch(arch string) AssetDownloadOpt {
+	return func(d *downloader) {
+		d.arch = arch
+	}
+}
+
+func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) AssetDownloader {
+	d := &downloader{
+		os:             runtime.GOOS,
+		arch:           runtime.GOARCH,
 		executablePath: executablePath,
 	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 var ErrNoAsset = errors.New("no asset found")
 
-func (d *downloader) DownloadAsset(ctx context.Context, assets []ReleaseAsset) (*DownloadInfo, cleanupFn, error) {
+func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) (*DownloadInfo, cleanupFn, error) {
 	// iterate through the assets and find the one that matches the os and arch
 	suffix := d.os + "_" + d.arch
 	for _, asset := range assets {
@@ -61,6 +79,10 @@ func (d *downloader) downloadAsset(ctx context.Context, url string) (*DownloadIn
 
 	// Download the file
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, nil, err
