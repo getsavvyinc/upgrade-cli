@@ -32,8 +32,11 @@ func setupTestServer(t *testing.T) *httptest.Server {
 			io.WriteString(w, checksumData)
 			return
 		}
+		if r.URL.Path == "/empty_checksums.txt" {
+			io.WriteString(w, "")
+			return
+		}
 		if r.URL.Path == "/malformed_checksums.txt" {
-			t.Log("sending malformed checksums")
 			io.WriteString(w, malformedChecksumData)
 			return
 		}
@@ -48,7 +51,7 @@ func TestDownloadCheckSum(t *testing.T) {
 	srv := setupTestServer(t)
 	ctx := context.Background()
 	testSuffix := "checksums.txt"
-	t.Run("TestDownloadCheckSum_ValidCheckSumFile", func(t *testing.T) {
+	t.Run("ValidCheckSumFile", func(t *testing.T) {
 		checksumURL := srv.URL + "/checksums.txt"
 		downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
 		checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
@@ -64,17 +67,33 @@ func TestDownloadCheckSum(t *testing.T) {
 			assert.Equal(t, strings.Join([]string{"checksum", k}, "_"), v)
 		}
 	})
-	t.Run("TestDownloadCheckSum_InvalidCheckSumFile", func(t *testing.T) {
-		malformedChecksumURL := srv.URL + "/malformed_checksums.txt"
-		downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
-		checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
-			{BrowserDownloadURL: malformedChecksumURL},
-		})
-		assert.Error(t, err)
-		assert.Nil(t, checksums)
-		assert.ErrorIs(t, err, ErrInvalidChecksumFile)
+	t.Run("InvalidCheckSumFile", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			url  string
+		}{
+			{
+				name: "MalformedChecksumFile",
+				url:  srv.URL + "/malformed_checksums.txt",
+			},
+			{
+				name: "EmptyCheckSumFile",
+				url:  srv.URL + "/empty_checksums.txt",
+			},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
+				checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
+					{BrowserDownloadURL: tc.url},
+				})
+				assert.Error(t, err)
+				assert.Nil(t, checksums)
+				assert.ErrorIs(t, err, ErrInvalidChecksumFile)
+			})
+		}
 	})
-	t.Run("TestDownloadCheckSum_NoCheckSumAsset", func(t *testing.T) {
+	t.Run("NoCheckSumAsset", func(t *testing.T) {
 		downloader := NewCheckSumDownloader(WithAssetSuffix(testSuffix))
 		checksums, err := downloader.DownloadCheckSum(ctx, []ReleaseAsset{
 			{BrowserDownloadURL: srv.URL + "/savvy_darwin_arm64"},

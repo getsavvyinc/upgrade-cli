@@ -88,6 +88,10 @@ func downloadCheckSum(ctx context.Context, url string) (*CheckSumInfo, error) {
 		}
 		checksums[parts[1]] = parts[0]
 	}
+
+	if len(checksums) == 0 {
+		return nil, fmt.Errorf("%w: checksum file is empty", ErrInvalidChecksumFile)
+	}
 	return &CheckSumInfo{checksums: checksums}, nil
 }
 
