@@ -1,4 +1,4 @@
-package upgrade
+package asset
 
 import (
 	"context"
@@ -18,11 +18,11 @@ import (
 
 type cleanupFn func() error
 
-type AssetDownloader interface {
-	DownloadAsset(ctx context.Context, ReleaseAssets []release.Asset) (*DownloadInfo, cleanupFn, error)
+type Downloader interface {
+	DownloadAsset(ctx context.Context, ReleaseAssets []release.Asset) (*Info, cleanupFn, error)
 }
 
-type DownloadInfo struct {
+type Info struct {
 	Checksum                 string
 	DownloadedBinaryFilePath string
 }
@@ -33,7 +33,7 @@ type downloader struct {
 	executablePath string
 }
 
-var _ AssetDownloader = (*downloader)(nil)
+var _ Downloader = (*downloader)(nil)
 
 type AssetDownloadOpt func(*downloader)
 
@@ -49,7 +49,7 @@ func WithArch(arch string) AssetDownloadOpt {
 	}
 }
 
-func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) AssetDownloader {
+func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) Downloader {
 	d := &downloader{
 		os:             runtime.GOOS,
 		arch:           runtime.GOARCH,
@@ -63,7 +63,7 @@ func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) AssetDo
 
 var ErrNoAsset = errors.New("no asset found")
 
-func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) (*DownloadInfo, cleanupFn, error) {
+func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) (*Info, cleanupFn, error) {
 	// iterate through the assets and find the one that matches the os and arch
 	suffix := d.os + "_" + d.arch
 	for _, asset := range assets {
@@ -74,7 +74,7 @@ func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) 
 	return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
 }
 
-func (d *downloader) downloadAsset(ctx context.Context, url string) (*DownloadInfo, cleanupFn, error) {
+func (d *downloader) downloadAsset(ctx context.Context, url string) (*Info, cleanupFn, error) {
 	executable := filepath.Base(d.executablePath)
 
 	// Download the file
@@ -117,7 +117,7 @@ func (d *downloader) downloadAsset(ctx context.Context, url string) (*DownloadIn
 		return nil, nil, err
 	}
 
-	return &DownloadInfo{
+	return &Info{
 		Checksum:                 hex.EncodeToString(hasher.Sum(nil)),
 		DownloadedBinaryFilePath: tmpFile.Name(),
 	}, cleanupFn, nil

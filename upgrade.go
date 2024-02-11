@@ -9,6 +9,7 @@ import (
 
 	"github.com/getsavvyinc/upgrade-cli/checksum"
 	"github.com/getsavvyinc/upgrade-cli/release"
+	"github.com/getsavvyinc/upgrade-cli/release/asset"
 	"github.com/hashicorp/go-version"
 )
 
@@ -21,7 +22,7 @@ type upgrader struct {
 	repo               string
 	owner              string
 	releaseGetter      release.Getter
-	downloader         AssetDownloader
+	assetDownloader    asset.Downloader
 	checksumDownloader checksum.Downloader
 	checksumValidator  checksum.CheckSumValidator
 }
@@ -30,9 +31,9 @@ var _ Upgrader = (*upgrader)(nil)
 
 type Opt func(*upgrader)
 
-func WithAssetDownloader(d AssetDownloader) Opt {
+func WithAssetDownloader(d asset.Downloader) Opt {
 	return func(u *upgrader) {
-		u.downloader = d
+		u.assetDownloader = d
 	}
 }
 
@@ -54,7 +55,7 @@ func NewUpgrader(owner string, repo string, executablePath string, opts ...Opt) 
 		owner:              owner,
 		executablePath:     executablePath,
 		releaseGetter:      release.NewReleaseGetter(repo, owner),
-		downloader:         NewAssetDownloader(executablePath),
+		assetDownloader:    asset.NewAssetDownloader(executablePath),
 		checksumDownloader: checksum.NewCheckSumDownloader(),
 		checksumValidator:  checksum.NewCheckSumValidator(),
 	}
@@ -88,7 +89,7 @@ func (u *upgrader) Upgrade(ctx context.Context, currentVersion string) error {
 
 	// from the releaseInfo, download the binary for the architecture
 
-	downloadInfo, cleanup, err := u.downloader.DownloadAsset(ctx, releaseInfo.Assets)
+	downloadInfo, cleanup, err := u.assetDownloader.DownloadAsset(ctx, releaseInfo.Assets)
 	if err != nil {
 		return err
 	}
