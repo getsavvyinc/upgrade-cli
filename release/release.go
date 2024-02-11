@@ -1,4 +1,4 @@
-package upgrade
+package release
 
 import (
 	"context"
@@ -18,9 +18,30 @@ type ReleaseInfo struct {
 	Assets  []ReleaseAsset `json:"assets"`
 }
 
+type ReleaseGetter interface {
+	GetLatestRelease(ctx context.Context) (*ReleaseInfo, error)
+}
+
+type githubReleaseGetter struct {
+	repo, owner string
+}
+
+var _ ReleaseGetter = (*githubReleaseGetter)(nil)
+
+func NewReleaseGetter(repo, owner string) *githubReleaseGetter {
+	return &githubReleaseGetter{
+		repo:  repo,
+		owner: owner,
+	}
+}
+
+func (g *githubReleaseGetter) GetLatestRelease(ctx context.Context) (*ReleaseInfo, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", g.repo, g.owner)
+	return getLatestRelease(ctx, url)
+}
+
 // getLatestRelease fetches the latest release from GitHub.
-func getLatestRelease(ctx context.Context, repo, owner string) (*ReleaseInfo, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repo, owner)
+func getLatestRelease(ctx context.Context, url string) (*ReleaseInfo, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
