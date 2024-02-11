@@ -24,8 +24,14 @@ const checksumData = ` checksum_savvy_darwin_arm64  savvy_darwin_arm64
 const malformedChecksumData = `6796a0fb64d0c78b2de5410a94749a 3bfb77291747c1835fbd427e8bf00f6af3  savvy_darwin_arm64
 `
 
-func setupTestServer(t *testing.T) *httptest.Server {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func setupTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	srv := httptest.NewServer(handler)
+	defer t.Cleanup(srv.Close)
+	return srv
+}
+
+func checkSumDataHandler(t *testing.T) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(200)
 		if r.URL.Path == "/checksums.txt" {
@@ -42,13 +48,11 @@ func setupTestServer(t *testing.T) *httptest.Server {
 		}
 		// DownloadCheckSum should only be called with routes that end with checksums.txt
 		t.Errorf("unexpected URL: %s", r.URL.Path)
-	}))
-	defer t.Cleanup(srv.Close)
-	return srv
+	})
 }
 
 func TestDownloadCheckSum(t *testing.T) {
-	srv := setupTestServer(t)
+	srv := setupTestServer(t, checkSumDataHandler(t))
 	ctx := context.Background()
 	testSuffix := "checksums.txt"
 	t.Run("ValidCheckSumFile", func(t *testing.T) {
