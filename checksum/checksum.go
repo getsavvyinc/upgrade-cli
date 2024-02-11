@@ -1,4 +1,4 @@
-package upgrade
+package checksum
 
 import (
 	"bufio"
@@ -17,6 +17,10 @@ type CheckSumDownloader interface {
 type CheckSumInfo struct {
 	// keyed on $binary_os_$arch
 	checksums map[string]string
+}
+
+type CheckSumGetter interface {
+	Get(key string) (string, bool)
 }
 
 type checksumDownloader struct {
@@ -129,10 +133,10 @@ func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
 	return v
 }
 
-func (v *validator) IsCheckSumValid(ctx context.Context, binary string, checksums *CheckSumInfo, downloadedChecksum string) bool {
+func (v *validator) IsCheckSumValid(ctx context.Context, binary string, checksums CheckSumGetter, downloadedChecksum string) bool {
 
 	key := fmt.Sprintf("%s_%s_%s", binary, v.os, v.arch)
-	expectedChecksum, ok := checksums.checksums[key]
+	expectedChecksum, ok := checksums.Get(key)
 	if !ok {
 		return false
 	}
