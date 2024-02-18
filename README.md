@@ -1,5 +1,10 @@
 # Upgrade-CLI
 
+<h3 align="left">
+  | <a href="https://getsavvy.so/discord">Discord</a> |
+</h3>
+
+
 Upgrade-CLI makes it easy to add an `upgrade` command to your cli.
 
 Upgrade-CLI was built to implement the `upgrade` command for [Savvy's](https://getsavvy.so) OSS [CLI](https://github.com/getsavvyinc/savvy-cli).
