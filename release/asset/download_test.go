@@ -70,4 +70,27 @@ func TestAssetDownloader(t *testing.T) {
 			assert.NoFileExists(t, tmpFile)
 		})
 	})
+	t.Run("VerifyFallback", func(t *testing.T) {
+		srv := setupTestServer(t, http.HandlerFunc(downloadDataHandler))
+		ctx := context.Background()
+		t.Run("DownloadFailsWithoutFallback", func(t *testing.T) {
+			downloader := NewAssetDownloader(executablePath, WithOS("os"), WithArch("amd64"))
+			asset, cleanupFn, err := downloader.DownloadAsset(ctx, []release.Asset{
+				{BrowserDownloadURL: srv.URL + "/download_os_x86_64"},
+			})
+			assert.ErrorIs(t, err, ErrNoAsset)
+			assert.Nil(t, asset)
+			assert.Nil(t, cleanupFn)
+		})
+		t.Run("DownloadSucceedsWithFallback", func(t *testing.T) {
+			downloader := NewAssetDownloader(executablePath, WithOS("os"), WithArch("amd64"), WithLookupArchFallback(map[string]string{"amd64": "x86_64"}))
+			asset, cleanupFn, err := downloader.DownloadAsset(ctx, []release.Asset{
+				{BrowserDownloadURL: srv.URL + "/download_os_x86_64"},
+			})
+			assert.NoError(t, err)
+			assert.NotNil(t, asset)
+			assert.NotNil(t, cleanupFn)
+			assert.Equal(t, downloadDataChecksum, asset.Checksum)
+		})
+	})
 }

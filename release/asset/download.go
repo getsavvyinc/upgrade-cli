@@ -28,9 +28,10 @@ type Info struct {
 }
 
 type downloader struct {
-	os             string
-	arch           string
-	executablePath string
+	os                 string
+	arch               string
+	lookupArchFallback map[string]string
+	executablePath     string
 }
 
 var _ Downloader = (*downloader)(nil)
@@ -49,11 +50,18 @@ func WithArch(arch string) AssetDownloadOpt {
 	}
 }
 
+func WithLookupArchFallback(lookupArchFallback map[string]string) AssetDownloadOpt {
+	return func(d *downloader) {
+		d.lookupArchFallback = lookupArchFallback
+	}
+}
+
 func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) Downloader {
 	d := &downloader{
-		os:             runtime.GOOS,
-		arch:           runtime.GOARCH,
-		executablePath: executablePath,
+		os:                 runtime.GOOS,
+		arch:               runtime.GOARCH,
+		executablePath:     executablePath,
+		lookupArchFallback: map[string]string{},
 	}
 	for _, opt := range opts {
 		opt(d)
@@ -66,12 +74,35 @@ var ErrNoAsset = errors.New("no asset found")
 func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) (*Info, cleanupFn, error) {
 	// iterate through the assets and find the one that matches the os and arch
 	suffix := d.os + "_" + d.arch
-	for _, asset := range assets {
-		if strings.HasSuffix(asset.BrowserDownloadURL, suffix) {
-			return d.downloadAsset(ctx, asset.BrowserDownloadURL)
-		}
+	asset, found := d.assetForSuffix(assets, suffix)
+	if found {
+		return d.downloadAsset(ctx, asset.BrowserDownloadURL)
+	}
+	// if asset not found, try a fallback. e.g amd64 -> x86_64
+	if d.lookupArchFallback == nil || len(d.lookupArchFallback) == 0 {
+		return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
+	}
+
+	fallbackArch, ok := d.lookupArchFallback[d.arch]
+	if !ok {
+		return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
+	}
+
+	fallbackSuffix := d.os + "_" + fallbackArch
+	asset, found = d.assetForSuffix(assets, fallbackSuffix)
+	if found {
+		return d.downloadAsset(ctx, asset.BrowserDownloadURL)
 	}
 	return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
+}
+
+func (d *downloader) assetForSuffix(assets []release.Asset, suffix string) (release.Asset, bool) {
+	for _, asset := range assets {
+		if strings.HasSuffix(asset.BrowserDownloadURL, suffix) {
+			return asset, true
+		}
+	}
+	return release.Asset{}, false
 }
 
 func (d *downloader) downloadAsset(ctx context.Context, url string) (*Info, cleanupFn, error) {
