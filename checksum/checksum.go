@@ -103,7 +103,28 @@ type CheckSumValidator interface {
 
 type validator struct {
 	os   string
-	arch string
+	arch arch
+}
+
+type arch string
+
+const (
+	archAmd64 arch = "amd64"
+	arch386   arch = "386"
+)
+
+// String maps arch to string.
+//
+// String maps 386 to i386 and amd64 to x86_64 for consistency across linux and darwin.
+func (a arch) String() string {
+	switch a {
+	case arch386:
+		return "i386"
+	case archAmd64:
+		return "x86_64"
+	default:
+		return string(a)
+	}
 }
 
 type ValidatorOption func(*validator)
@@ -114,16 +135,16 @@ func WithOS(os string) ValidatorOption {
 	}
 }
 
-func WithArch(arch string) ValidatorOption {
+func WithArch(a string) ValidatorOption {
 	return func(v *validator) {
-		v.arch = arch
+		v.arch = arch(strings.ToLower(a))
 	}
 }
 
 func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
 	v := &validator{
 		os:   runtime.GOOS,
-		arch: runtime.GOARCH,
+		arch: arch(strings.ToLower(runtime.GOARCH)),
 	}
 	for _, opt := range opts {
 		opt(v)
