@@ -116,6 +116,7 @@ func TestCheckSumValidator(t *testing.T) {
 		Checksums: map[string]string{
 			binary + "_darwin_x86_64": checksum,
 			binary + "_linux_x86_64":  checksum,
+			binary + "_linux_i386":    checksum,
 		},
 	}
 
@@ -132,6 +133,22 @@ func TestCheckSumValidator(t *testing.T) {
 			downloadedChecksum: checksum,
 			os:                 "linux",
 			arch:               "x86_64",
+			isValid:            true,
+			binary:             binary,
+		},
+		{
+			name:               "ValidChecksumsWithAmd64",
+			downloadedChecksum: checksum,
+			os:                 "linux",
+			arch:               "amd64",
+			isValid:            true,
+			binary:             binary,
+		},
+		{
+			name:               "ValidChecksumsWith386",
+			downloadedChecksum: checksum,
+			os:                 "linux",
+			arch:               "386",
 			isValid:            true,
 			binary:             binary,
 		},
