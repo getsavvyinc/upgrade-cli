@@ -58,10 +58,9 @@ func WithLookupArchFallback(lookupArchFallback map[string]string) AssetDownloadO
 
 func NewAssetDownloader(executablePath string, opts ...AssetDownloadOpt) Downloader {
 	d := &downloader{
-		os:                 runtime.GOOS,
-		arch:               runtime.GOARCH,
-		executablePath:     executablePath,
-		lookupArchFallback: map[string]string{},
+		os:             runtime.GOOS,
+		arch:           runtime.GOARCH,
+		executablePath: executablePath,
 	}
 	for _, opt := range opts {
 		opt(d)
