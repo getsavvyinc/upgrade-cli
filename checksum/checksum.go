@@ -103,29 +103,12 @@ type CheckSumValidator interface {
 
 type validator struct {
 	os   string
-	arch arch
+	arch string
 }
-
-type arch string
-
-const (
-	archAmd64 arch = "amd64"
-	arch386   arch = "386"
-)
 
 // String maps arch to string.
 //
 // String maps 386 to i386 and amd64 to x86_64 for consistency across linux and darwin.
-func (a arch) String() string {
-	switch a {
-	case arch386:
-		return "i386"
-	case archAmd64:
-		return "x86_64"
-	default:
-		return string(a)
-	}
-}
 
 type ValidatorOption func(*validator)
 
@@ -135,17 +118,23 @@ func WithOS(os string) ValidatorOption {
 	}
 }
 
+var fallbackArchMap = map[string]string{
+	"amd64": "x86_64",
+	"386":   "i386",
+}
+
 func WithArch(a string) ValidatorOption {
 	return func(v *validator) {
-		v.arch = arch(strings.ToLower(a))
+		v.arch = strings.ToLower(a)
 	}
 }
 
 func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
 	v := &validator{
 		os:   runtime.GOOS,
-		arch: arch(strings.ToLower(runtime.GOARCH)),
+		arch: strings.ToLower(runtime.GOARCH),
 	}
+
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -155,6 +144,19 @@ func NewCheckSumValidator(opts ...ValidatorOption) CheckSumValidator {
 func (v *validator) IsCheckSumValid(ctx context.Context, binary string, info *Info, downloadedChecksum string) bool {
 
 	key := fmt.Sprintf("%s_%s_%s", binary, v.os, v.arch)
+	expectedChecksum, ok := info.Checksums[key]
+	if !ok {
+		return v.tryFallbackArch(binary, info, downloadedChecksum)
+	}
+	return expectedChecksum == downloadedChecksum
+}
+
+func (v *validator) tryFallbackArch(binary string, info *Info, downloadedChecksum string) bool {
+	arch, ok := fallbackArchMap[v.arch]
+	if !ok {
+		return false
+	}
+	key := fmt.Sprintf("%s_%s_%s", binary, v.os, arch)
 	expectedChecksum, ok := info.Checksums[key]
 	if !ok {
 		return false
