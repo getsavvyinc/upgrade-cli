@@ -105,8 +105,6 @@ func (d *downloader) assetForSuffix(assets []release.Asset, suffix string) (rele
 }
 
 func (d *downloader) downloadAsset(ctx context.Context, url string) (*Info, cleanupFn, error) {
-	executable := filepath.Base(d.executablePath)
-
 	// Download the file
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -119,8 +117,10 @@ func (d *downloader) downloadAsset(ctx context.Context, url string) (*Info, clea
 	}
 	defer resp.Body.Close()
 
-	// Create a temporary file
-	tmpFile, err := os.CreateTemp("", executable)
+	// Create a temporary file in the same directory as the executable
+	// Doing so avoids issues where the downloaded file is on a different filesystem/mount point from the executable.
+	executable, executableDir := filepath.Base(d.executablePath), filepath.Dir(d.executablePath)
+	tmpFile, err := os.CreateTemp(executableDir, executable)
 	if err != nil {
 		return nil, nil, err
 	}
