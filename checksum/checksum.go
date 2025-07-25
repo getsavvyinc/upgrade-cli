@@ -119,8 +119,9 @@ func WithOS(os string) ValidatorOption {
 }
 
 var fallbackArchMap = map[string][]string{
-	"amd64": {"x86_64", "all"},
+	"amd64": {"x86_64"},
 	"386":   {"i386", "all"},
+	"arm64": {"all"},
 }
 
 func WithArch(a string) ValidatorOption {
