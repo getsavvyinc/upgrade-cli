@@ -118,9 +118,9 @@ func WithOS(os string) ValidatorOption {
 	}
 }
 
-var fallbackArchMap = map[string]string{
-	"amd64": "x86_64",
-	"386":   "i386",
+var fallbackArchMap = map[string][]string{
+	"amd64": {"x86_64", "all"},
+	"386":   {"i386", "all"},
 }
 
 func WithArch(a string) ValidatorOption {
@@ -152,14 +152,17 @@ func (v *validator) IsCheckSumValid(ctx context.Context, binary string, info *In
 }
 
 func (v *validator) tryFallbackArch(binary string, info *Info, downloadedChecksum string) bool {
-	arch, ok := fallbackArchMap[v.arch]
+	archs, ok := fallbackArchMap[v.arch]
 	if !ok {
 		return false
 	}
-	key := fmt.Sprintf("%s_%s_%s", binary, v.os, arch)
-	expectedChecksum, ok := info.Checksums[key]
-	if !ok {
-		return false
+
+	for _, arch := range archs {
+		key := fmt.Sprintf("%s_%s_%s", binary, v.os, arch)
+		expectedChecksum, ok := info.Checksums[key]
+		if ok {
+			return expectedChecksum == downloadedChecksum
+		}
 	}
-	return expectedChecksum == downloadedChecksum
+	return false
 }

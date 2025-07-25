@@ -83,7 +83,12 @@ func TestAssetDownloader(t *testing.T) {
 			assert.Nil(t, cleanupFn)
 		})
 		t.Run("DownloadSucceedsWithFallback", func(t *testing.T) {
-			downloader := NewAssetDownloader(executablePath, WithOS("os"), WithArch("amd64"), WithLookupArchFallback(map[string]string{"amd64": "x86_64"}))
+			downloader := NewAssetDownloader(executablePath,
+				WithOS("os"),
+				WithArch("amd64"),
+				WithLookupArchFallback(
+					map[string][]string{"amd64": {"all", "x86_64"}},
+				))
 			asset, cleanupFn, err := downloader.DownloadAsset(ctx, []release.Asset{
 				{BrowserDownloadURL: srv.URL + "/download_os_x86_64"},
 			})
