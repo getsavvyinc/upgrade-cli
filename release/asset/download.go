@@ -30,7 +30,7 @@ type Info struct {
 type downloader struct {
 	os                 string
 	arch               string
-	lookupArchFallback map[string]string
+	lookupArchFallback map[string][]string
 	executablePath     string
 }
 
@@ -50,7 +50,7 @@ func WithArch(arch string) AssetDownloadOpt {
 	}
 }
 
-func WithLookupArchFallback(lookupArchFallback map[string]string) AssetDownloadOpt {
+func WithLookupArchFallback(lookupArchFallback map[string][]string) AssetDownloadOpt {
 	return func(d *downloader) {
 		d.lookupArchFallback = lookupArchFallback
 	}
@@ -78,19 +78,22 @@ func (d *downloader) DownloadAsset(ctx context.Context, assets []release.Asset) 
 		return d.downloadAsset(ctx, asset.BrowserDownloadURL)
 	}
 	// if asset not found, try a fallback. e.g amd64 -> x86_64
-	if d.lookupArchFallback == nil || len(d.lookupArchFallback) == 0 {
+	if len(d.lookupArchFallback) == 0 {
 		return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
 	}
 
-	fallbackArch, ok := d.lookupArchFallback[d.arch]
+	fallbackArchs, ok := d.lookupArchFallback[d.arch]
 	if !ok {
 		return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
 	}
 
-	fallbackSuffix := d.os + "_" + fallbackArch
-	asset, found = d.assetForSuffix(assets, fallbackSuffix)
-	if found {
-		return d.downloadAsset(ctx, asset.BrowserDownloadURL)
+	// Try to find an asset for each fallback architecture
+	for _, fallbackArch := range fallbackArchs {
+		fallbackSuffix := d.os + "_" + fallbackArch
+		asset, found = d.assetForSuffix(assets, fallbackSuffix)
+		if found {
+			return d.downloadAsset(ctx, asset.BrowserDownloadURL)
+		}
 	}
 	return nil, nil, fmt.Errorf("%w: os:%s arch:%s", ErrNoAsset, d.os, d.arch)
 }

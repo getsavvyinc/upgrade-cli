@@ -57,9 +57,9 @@ func NewUpgrader(owner string, repo string, executablePath string, opts ...Opt) 
 		owner:          owner,
 		executablePath: executablePath,
 		releaseGetter:  release.NewReleaseGetter(repo, owner),
-		assetDownloader: asset.NewAssetDownloader(executablePath, asset.WithLookupArchFallback(map[string]string{
-			"amd64": "x86_64",
-			"386":   "i86",
+		assetDownloader: asset.NewAssetDownloader(executablePath, asset.WithLookupArchFallback(map[string][]string{
+			"amd64": {"x86_64", "all"},
+			"386":   {"i86", "all"},
 		})),
 		checksumDownloader: checksum.NewCheckSumDownloader(),
 		checksumValidator:  checksum.NewCheckSumValidator(),
